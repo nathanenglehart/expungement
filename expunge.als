@@ -5,7 +5,7 @@
 -- "One Bad Night Rule" (Sec. 1b)
 -- if there is a moment with multiple expungements, the expungements 
 -- are linked to convictions that happen “at the same time”.
--- 
+-- This should be working now but we need to double check.
 
 -- 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
 -- 
@@ -25,10 +25,9 @@ sig Expungement extends Event {
 }
 
 -- now indicates the current event
-var lone sig now in Event { } 
+var sig now in Event { } 
 -- NOTE: adding "set" will not compile. I think "set" actually doesn't make sense
--- here anyways (maybe?). We only want one "now". We want multiple events *in*
--- now. DOES THIS MAKE SENSE - DOUBLE CHECK AND MAYBE SEND EMAIL??
+-- here anyways (maybe?) since I think the default is set.
 
 -- Does the ten-year felony ty occur after a preceding ten-year felony?
 pred afterFirstTenner[ty: TenYearFelony] {
@@ -70,8 +69,10 @@ fact {
 	-- Every expungement is expunging a crime that hasn't been expunged yet
 	all x: Expungement | all x1: Expungement - x | x.con != x1.con
 	-- Convictions and expungements cannot happen at same time
-	all x: Expungement | all c: Conviction | c in now => x not in now
-	all x: Expungement | all c: Conviction | x in now => c not in now
+	-- However, convictions can happen at same time and then later
+	-- be expunged at the same time. This is the "One Bad Night Rule"
+	all x: Expungement | all c: Conviction | always (c in now => x not in now)
+	all x: Expungement | all c: Conviction | always (x in now => c not in now)
 }
 
 -- Michiganders with 4 or more felonies are ineligible to set aside *any* convictions (Sec. 1, 1a).
@@ -100,13 +101,10 @@ fact {
 
 -- Analyzer searches for all instances which satisfy the show predicate.
 pred show {
-	
-	--some f: Felony | afterThirdFelony[f] and expunged[f]
-	--some af: AssaultiveFelony | afterSecondAssault[af] and expunged[af]
-	--some ty: TenYearFelony | afterFirstTenner[ty] and expunged[ty]
-	--some ty: TenYearFelony | expunged[ty]
-	--some owi : OWI | afterFirstOWI[owi] and expunged[owi]
 	some owi : OWI | expunged[owi]
+	-- can we have a crime that is now at a different pt in time than others
+	-- YES! 
+	--some owi : OWI | some c: Conviction | c in now and owi not in now and expunged[owi]
 }
 
 run show for 8
