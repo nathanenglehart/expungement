@@ -1,4 +1,4 @@
--- nathan and ishaq version
+-- nathan, ishaq version
 
 -- TODO
 
