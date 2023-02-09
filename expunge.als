@@ -2,18 +2,14 @@
 
 -- TODO
 
--- "One Bad Night Rule" (Sec. 1b)
--- if there is a moment with multiple expungements, the expungements 
--- are linked to convictions that happen “at the same time”.
--- This should be working now but we need to double check.
-
 -- 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
--- 
  
 module expunge
 
 -- An event is a conviction or expungement
-abstract sig Event { }
+abstract sig Event { 
+	date: one year
+}
 abstract sig Conviction extends Event { }
 abstract sig Felony extends Conviction { }
 abstract sig Misdemeanor extends Conviction { } 
@@ -24,10 +20,19 @@ sig Expungement extends Event {
 	con: one Conviction -- the conviction that is being expunged
 }
 
+abstract sig year { 
+	happensBefore: set year,
+	withinThree: set year
+} 
+
+-- Y1, ..., Y4 
+one sig Y1, Y2, Y3, Y4 extends year { }
+
+-- Full version, uncomment when very confident in model behavior
+--one sig Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10 extends year { }
+
 -- now indicates the current event
 var sig now in Event { } 
--- NOTE: adding "set" will not compile. I think "set" actually doesn't make sense
--- here anyways (maybe?) since I think the default is set.
 
 -- Does the ten-year felony ty occur after a preceding ten-year felony?
 pred afterFirstTenner[ty: TenYearFelony] {
@@ -76,11 +81,8 @@ fact {
 }
 
 -- Michiganders with 4 or more felonies are ineligible to set aside *any* convictions (Sec. 1, 1a).
--- This is computationally expensive and seems to work (optimize)
-fact {
-	--all f: Felony | all c: Conviction | afterThirdFelony[f]	=> !expunged[c]
-	-- This doesn't seem to work	
-	--no f: Felony | no c: Conviction | afterThirdFelony[f] and expunged[c]
+fact {	
+	no f: Felony | no c: Conviction | afterThirdFelony[f] and expunged[c]
 }
 
 -- Only two assaultive felonies may be expunged (Sec. 1, 1b).
@@ -94,17 +96,66 @@ fact {
 	no ty: TenYearFelony | afterFirstTenner[ty] and expunged[ty]
 }
 
--- Only one OWI may be expunged ().
+-- Only one OWI may be expunged (Sec. 1d, 2abcd).
 fact {
 	no owi: OWI | afterFirstOWI[owi] and expunged[owi]
+}
+
+-- Hard coded years
+fact {
+	-- Commented out for simple examples with Y1, ..., Y4
+	-- However, will work in the exact same way for larger cases
+
+	--happensBefore = Y1->(Y2+Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10) 
+	--+ Y2->(Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10)
+	--+ Y3->(Y4+Y5+Y6+Y7+Y8+Y9+Y10)
+	--+ Y4->(Y5+Y6+Y7+Y8+Y9+Y10)
+	--+ Y5->(Y6+Y7+Y8+Y9+Y10)
+	--+ Y6->(Y7+Y8+Y9+Y10)
+	--+ Y7->(Y8+Y9+Y10)
+	--+ Y8->(Y9+Y10)
+	--+ Y9->(Y10)
+
+	--withinThree = Y1->(Y2+Y3)
+	--+ Y2->(Y3+Y4)
+	--+ Y3->(Y4+Y5)
+	--+ Y4->(Y5+Y6)
+	--+ Y5->(Y6+Y7)
+	--+ Y6->(Y7+Y8)
+	--+ Y7->(Y8+Y9)
+	--+ Y8->(Y9+Y10)
+	--+ Y9->(Y10)
+
+	-- Y1, ..., Y4
+
+	happensBefore = Y1->(Y2+Y3+Y4) 
+	+ Y2->(Y3+Y4)
+	+ Y3->(Y4)
+
+	withinThree = Y1->(Y2+Y3)
+	+ Y2->(Y3+Y4)
+	+ Y3->(Y4)
+}
+
+pred timeContradiction[e: Event] {
+	some e1: Event | e1 in now and eventually e in now and e1.date in e.date.happensBefore
+}
+
+-- Well-behaved years
+fact {
+	-- All elements in now must have the same year
+	all e: Event | all e1: Event - e | always (e.date != e1.date => e not in now or e1 not in now) 
+
+	-- All elements not in now must have a different year than those in now
+	all e: Event | all e1: Event - e | always (e in now and e1 not in now => e.date != e1.date)
+
+	-- No situations where Y(N) occurs before Y(N-1), i.e. Y2 cannot occur before Y1 
+	no e: Event | timeContradiction[e]
 }
 
 -- Analyzer searches for all instances which satisfy the show predicate.
 pred show {
 	some owi : OWI | expunged[owi]
-	-- can we have a crime that is now at a different pt in time than others
-	-- YES! 
-	--some owi : OWI | some c: Conviction | c in now and owi not in now and expunged[owi]
 }
 
 run show for 8
