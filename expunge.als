@@ -4,6 +4,21 @@
 
 -- 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
  
+-- constrain happens before elegantly
+-- libraries of predefined things in alloy
+-- orderering.als
+-- to do so run the following:
+-- open util/ordering[Id]
+
+-- Real similarity of the contents of the predicates
+-- e.g. afterFirstTenner[], afterSecondAssault[], afterFirstOWI[], ...
+-- check whether any of these things has happened in one single pred.
+-- tell me if any of these things have happened already
+
+-- con: some Convictions should work now
+-- fact { } constraints model with many predicates
+-- (as opposed to before when we had many individual facts)
+
 module expunge
 
 -- An event is a conviction or expungement
@@ -17,7 +32,7 @@ sig OWI in Misdemeanor { }
 sig AssaultiveFelony in Felony { }
 sig TenYearFelony in Felony { }
 sig Expungement extends Event {
-	con: one Conviction -- the conviction that is being expunged
+	con: some Conviction -- the conviction that is being expunged
 }
 
 abstract sig year { 
@@ -61,7 +76,12 @@ pred afterFirstOWI[owi: OWI] {
 
 -- Is the conviction c (eventually) expunged?
 pred expunged[c: Conviction] {
-	some e: Expungement | e.con = c
+	some e: Expungement | c in e.con
+}
+
+-- Is an expungement expunging a previously expunged conviction?
+pred multExpunge[e: Expungement] {
+	--all e1: Expungement - e | all c: Conviction | c in e.con and c in e1.con
 }
 
 fact {
@@ -73,6 +93,8 @@ fact {
 	all x: Expungement | eventually (x.con in now and eventually x in now)
 	-- Every expungement is expunging a crime that hasn't been expunged yet
 	all x: Expungement | all x1: Expungement - x | x.con != x1.con
+	-- Crimes are not expunged twice
+	all x: Expungement | all x1: Expungement - x | all c: Conviction | c in x.con  => c not in x1.con
 	-- Convictions and expungements cannot happen at same time
 	-- However, convictions can happen at same time and then later
 	-- be expunged at the same time. This is the "One Bad Night Rule"
@@ -81,24 +103,28 @@ fact {
 }
 
 -- Michiganders with 4 or more felonies are ineligible to set aside *any* convictions (Sec. 1, 1a).
-fact {	
+pred sec1_1a {	
 	no f: Felony | no c: Conviction | afterThirdFelony[f] and expunged[c]
 }
 
 -- Only two assaultive felonies may be expunged (Sec. 1, 1b).
-fact {
+pred sec1_1b {
 	no af: AssaultiveFelony | afterSecondAssault[af] and expunged[af]
 }
 
-
 -- Only one ten year felony may be expunged (Sec. 1, 1c).
-fact {
+pred sec1_1c {
 	no ty: TenYearFelony | afterFirstTenner[ty] and expunged[ty]
 }
 
 -- Only one OWI may be expunged (Sec. 1d, 2abcd).
-fact {
+pred sec1d_2 {
 	no owi: OWI | afterFirstOWI[owi] and expunged[owi]
+}
+
+-- The constraints of MCL 780.621 hold in the model.
+fact {
+	sec1d_2 and sec1_1c and sec1_1b and sec1_1a
 }
 
 -- Hard coded years
