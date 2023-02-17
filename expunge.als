@@ -1,5 +1,11 @@
 -- nathan, ishaq version
 
+-- updates:
+-- Expungement for multiple Convictions should work now
+-- single fact { } constraints model with many predicates such as 
+-- afterFirstTenner and afterSecondAssault 
+-- (as opposed to before when we had many individual facts)
+
 -- TODO
 
 -- 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
@@ -9,15 +15,6 @@
 -- orderering.als
 -- to do so run the following:
 -- open util/ordering[Id]
-
--- Real similarity of the contents of the predicates
--- e.g. afterFirstTenner[], afterSecondAssault[], afterFirstOWI[], ...
--- check whether any of these things has happened in one single pred.
--- tell me if any of these things have happened already
-
--- con: some Convictions should work now
--- fact { } constraints model with many predicates
--- (as opposed to before when we had many individual facts)
 
 module expunge
 
