@@ -158,6 +158,7 @@ fact {
 	withinThree = Y1->(Y2+Y3)
 	+ Y2->(Y3+Y4)
 	+ Y3->(Y4)
+	--no e: Expungement| e.con.year -> e.year in withinThree
 }
 
 pred timeContradiction[e: Event] {
@@ -174,6 +175,8 @@ fact {
 
 	-- No situations where Y(N) occurs before Y(N-1), i.e. Y2 cannot occur before Y1 
 	no e: Event | timeContradiction[e]
+	
+
 }
 
 -- Analyzer searches for all instances which satisfy the show predicate.
