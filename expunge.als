@@ -1,24 +1,8 @@
 -- nathan, ishaq version
 
--- updates:
--- Expungement for multiple Convictions should work now
--- single fact { } constraints model with many predicates such as 
--- afterFirstTenner and afterSecondAssault 
--- (as opposed to before when we had many individual facts)
-
--- TODO
-
--- 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
- 
--- constrain happens before elegantly
--- libraries of predefined things in alloy
--- orderering.als
--- to do so run the following:
--- open util/ordering[Id]
-
 module expunge
 
--- An event is a conviction or expungement
+-- An event is a conviction or expungement that happens during a one year
 abstract sig Event { 
 	date: one year
 }
@@ -37,11 +21,7 @@ abstract sig year {
 	withinThree: set year
 } 
 
--- Y1, ..., Y4 
-one sig Y1, Y2, Y3, Y4 extends year { }
-
--- Full version, uncomment when very confident in model behavior
---one sig Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10 extends year { }
+one sig Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10 extends year { }
 
 -- now indicates the current event
 var sig now in Event { } 
@@ -92,6 +72,9 @@ fact {
 	all x: Expungement | all x1: Expungement - x | x.con != x1.con
 	-- Crimes are not expunged twice
 	all x: Expungement | all x1: Expungement - x | all c: Conviction | c in x.con  => c not in x1.con
+}
+
+fact {
 	-- Convictions and expungements cannot happen at same time
 	-- However, convictions can happen at same time and then later
 	-- be expunged at the same time. This is the "One Bad Night Rule"
@@ -126,41 +109,28 @@ fact {
 
 -- Hard coded years
 fact {
-	-- Commented out for simple examples with Y1, ..., Y4
-	-- However, will work in the exact same way for larger cases
-
-	--happensBefore = Y1->(Y2+Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10) 
-	--+ Y2->(Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10)
-	--+ Y3->(Y4+Y5+Y6+Y7+Y8+Y9+Y10)
-	--+ Y4->(Y5+Y6+Y7+Y8+Y9+Y10)
-	--+ Y5->(Y6+Y7+Y8+Y9+Y10)
-	--+ Y6->(Y7+Y8+Y9+Y10)
-	--+ Y7->(Y8+Y9+Y10)
-	--+ Y8->(Y9+Y10)
-	--+ Y9->(Y10)
-
-	--withinThree = Y1->(Y2+Y3)
-	--+ Y2->(Y3+Y4)
-	--+ Y3->(Y4+Y5)
-	--+ Y4->(Y5+Y6)
-	--+ Y5->(Y6+Y7)
-	--+ Y6->(Y7+Y8)
-	--+ Y7->(Y8+Y9)
-	--+ Y8->(Y9+Y10)
-	--+ Y9->(Y10)
-
-	-- Y1, ..., Y4
-
-	happensBefore = Y1->(Y2+Y3+Y4) 
-	+ Y2->(Y3+Y4)
-	+ Y3->(Y4)
+	happensBefore = Y1->(Y2+Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10) 
+	+ Y2->(Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10)
+	+ Y3->(Y4+Y5+Y6+Y7+Y8+Y9+Y10)
+	+ Y4->(Y5+Y6+Y7+Y8+Y9+Y10)
+	+ Y5->(Y6+Y7+Y8+Y9+Y10)
+	+ Y6->(Y7+Y8+Y9+Y10)
+	+ Y7->(Y8+Y9+Y10)
+	+ Y8->(Y9+Y10)
+	+ Y9->(Y10)
 
 	withinThree = Y1->(Y2+Y3)
 	+ Y2->(Y3+Y4)
-	+ Y3->(Y4)
-	--no e: Expungement| e.con.year -> e.year in withinThree
+	+ Y3->(Y4+Y5)
+	+ Y4->(Y5+Y6)
+	+ Y5->(Y6+Y7)
+	+ Y6->(Y7+Y8)
+	+ Y7->(Y8+Y9)
+	+ Y8->(Y9+Y10)
+	+ Y9->(Y10)
 }
 
+-- now must go through years in chronological order i.e. now is in Y(N-1) before Y(N) for 1 =< N =< 10
 pred timeContradiction[e: Event] {
 	some e1: Event | e1 in now and eventually e in now and e1.date in e.date.happensBefore
 }
@@ -175,8 +145,11 @@ fact {
 
 	-- No situations where Y(N) occurs before Y(N-1), i.e. Y2 cannot occur before Y1 
 	no e: Event | timeContradiction[e]
-	
+}
 
+-- Timing for Expungements: 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
+fact {
+	some e: Expungement | not e.con.date -> e.date in withinThree -- Misdemeanor
 }
 
 -- Analyzer searches for all instances which satisfy the show predicate.
