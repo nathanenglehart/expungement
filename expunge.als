@@ -13,7 +13,7 @@ sig OWI in Misdemeanor { }
 sig AssaultiveFelony in Felony { }
 sig TenYearFelony in Felony { }
 sig Expungement extends Event {
-	con: some Conviction -- the conviction that is being expunged
+	con: some Conviction -- the convictions that are being expunged
 }
 
 abstract sig year { 
@@ -104,9 +104,14 @@ pred sec1d_2 {
 
 -- The constraints of MCL 780.621 hold in the model.
 fact {
-	sec1d_2 and sec1_1c and sec1_1b and sec1_1a
+	sec1d_2
+	sec1_1c 
+	sec1_1b 
+	sec1_1a
 }
 
+-- ordering.als as an alternative
+-- also is a sequence.als with useful functions and preds to simplify what we have
 -- Hard coded years
 fact {
 	happensBefore = Y1->(Y2+Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10) 
@@ -140,6 +145,7 @@ fact {
 	-- All elements in now must have the same year
 	all e: Event | all e1: Event - e | always (e.date != e1.date => e not in now or e1 not in now) 
 
+	-- double check. This may be too restrictive
 	-- All elements not in now must have a different year than those in now
 	all e: Event | all e1: Event - e | always (e in now and e1 not in now => e.date != e1.date)
 
@@ -149,11 +155,14 @@ fact {
 
 -- Timing for Expungements: 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
 fact {
-	some e: Expungement | not e.con.date -> e.date in withinThree -- Misdemeanor
+	no e: Expungement | e.con.date -> e.date in withinThree -- Misdemeanor
+	--no e: Expungement | e.con in Misdemeanor and e.con.date -> e.date in withinThree -- withinFive
 }
 
+-- add predicates to check scenarios. Assert that what we expect should happen will happen
 -- Analyzer searches for all instances which satisfy the show predicate.
 pred show {
+	
 	some owi : OWI | expunged[owi]
 }
 
