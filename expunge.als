@@ -2,6 +2,8 @@
 
 module expunge
 
+open util/ordering[year]
+
 -- An event is a conviction or expungement that happens during a one year
 abstract sig Event { 
 	date: one year
@@ -16,12 +18,58 @@ sig Expungement extends Event {
 	con: some Conviction -- the convictions that are being expunged
 }
 
-abstract sig year { 
-	happensBefore: set year,
-	withinThree: set year
-} 
+-- Linearly ordered time
 
-one sig Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10 extends year { }
+sig year {
+	happensBefore: set year,
+	withinThree: set year,
+	withinFive: set year,
+	withinSeven: set year
+}
+
+pred sensicalHappensBefore[y: year] {
+	all y1: year - y | y1 in y.happensBefore <=> y1.gt[y]
+}
+
+pred sensicalWithinThree[y: year] {
+	
+	y != last => y.next in y.withinThree
+	y.next != last => y.next.next in y.withinThree
+
+	all y1: year - y | y1 in y.withinThree => y.lt[y1]
+
+	#y.withinThree < 3
+	y not in y.withinThree
+}
+
+pred sensicalWithinFive[y: year] {
+	all y1: year - y | y1 in y.withinThree => y1 in y.withinFive
+	all y1: year - y | y1 in y.next.withinThree => y1 in y.withinFive
+	all y1: year - y | y1 in y.next.next.withinThree => y1 in y.withinFive
+	
+	all y1: year - y | y1 in y.withinFive => y.lt[y1]
+
+	#y.withinFive < 5
+	y not in y.withinFive
+}
+
+pred sensicalWithinSeven[y: year] {
+	all y1: year - y | y1 in y.withinFive => y1 in y.withinSeven
+	all y1: year - y | y1 in y.next.withinFive => y1 in y.withinSeven
+	all y1: year - y | y1 in y.next.next.withinFive => y1 in y.withinSeven
+	
+	all y1: year - y | y1 in y.withinSeven => y.lt[y1]
+
+	#y.withinSeven < 7
+	y not in y.withinSeven
+}
+
+fact {
+	all y: year | sensicalHappensBefore[y]
+	all y: year | sensicalWithinThree[y]
+	all y: year | sensicalWithinFive[y]
+	all y: year | sensicalWithinSeven[y]
+}
 
 -- now indicates the current event
 var sig now in Event { } 
@@ -108,31 +156,6 @@ fact {
 	sec1_1c 
 	sec1_1b 
 	sec1_1a
-}
-
--- ordering.als as an alternative
--- also is a sequence.als with useful functions and preds to simplify what we have
--- Hard coded years
-fact {
-	happensBefore = Y1->(Y2+Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10) 
-	+ Y2->(Y3+Y4+Y5+Y6+Y7+Y8+Y9+Y10)
-	+ Y3->(Y4+Y5+Y6+Y7+Y8+Y9+Y10)
-	+ Y4->(Y5+Y6+Y7+Y8+Y9+Y10)
-	+ Y5->(Y6+Y7+Y8+Y9+Y10)
-	+ Y6->(Y7+Y8+Y9+Y10)
-	+ Y7->(Y8+Y9+Y10)
-	+ Y8->(Y9+Y10)
-	+ Y9->(Y10)
-
-	withinThree = Y1->(Y2+Y3)
-	+ Y2->(Y3+Y4)
-	+ Y3->(Y4+Y5)
-	+ Y4->(Y5+Y6)
-	+ Y5->(Y6+Y7)
-	+ Y6->(Y7+Y8)
-	+ Y7->(Y8+Y9)
-	+ Y8->(Y9+Y10)
-	+ Y9->(Y10)
 }
 
 -- now must go through years in chronological order i.e. now is in Y(N-1) before Y(N) for 1 =< N =< 10
