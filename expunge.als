@@ -29,6 +29,7 @@ sig year {
 
 pred sensicalHappensBefore[y: year] {
 	all y1: year - y | y1 in y.happensBefore <=> y1.gt[y]
+	y not in y.happensBefore
 }
 
 pred sensicalWithinThree[y: year] {
@@ -76,27 +77,26 @@ var sig now in Event { }
 
 -- Does the ten-year felony ty occur after a preceding ten-year felony?
 pred afterFirstTenner[ty: TenYearFelony] {
-	some ty1: TenYearFelony - ty |
-		eventually (now = ty1 and (eventually now = ty))
+	some ty1: TenYearFelony - ty | 
+		eventually (ty1 in now and (eventually ty in now))
 }
 
 -- Does the assaultive felony af occur after two preceding assaultive felonies?
 pred afterSecondAssault[af: AssaultiveFelony] {
 	some af1: AssaultiveFelony - af | some af2: AssaultiveFelony - af - af1 |
-		eventually (now = af1 and (eventually (now = af2 and eventually now = af)))
+		eventually (af1 in now and (eventually (af2 in now and eventually af in now)))
 }
 
 -- Does the felony f occur after three preceding felonies?
 pred afterThirdFelony[f: Felony] {
 	some f1: Felony - f | some f2: Felony - f - f1 | some f3: Felony - f - f1 - f2 |
-		eventually (now = f1 and
-			(eventually (now = f2 and (eventually now = f3 and eventually now = f))))
+		eventually (f1 in now and (eventually (f2 in now and (eventually f3 in now and eventually f in now)))) 
 }
 
 -- Does the OWI occur after a preceding OWI?
 pred afterFirstOWI[owi: OWI] {
 	some owi1: OWI - owi |
-		eventually (now = owi1 and (eventually now = owi))
+		eventually (owi1 in now and (eventually owi in now))
 }
 
 -- Is the conviction c (eventually) expunged?
@@ -185,8 +185,8 @@ fact {
 -- add predicates to check scenarios. Assert that what we expect should happen will happen
 -- Analyzer searches for all instances which satisfy the show predicate.
 pred show {
-	
-	some owi : OWI | expunged[owi]
+	some f: Felony | expunged[f]
+	--some owi : OWI | expunged[owi]
 }
 
 run show for 8
