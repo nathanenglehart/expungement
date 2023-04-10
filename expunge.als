@@ -84,13 +84,13 @@ pred afterFirstTenner[ty: TenYearFelony] {
 -- Does the assaultive felony af occur after two preceding assaultive felonies?
 pred afterSecondAssault[af: AssaultiveFelony] {
 	some af1: AssaultiveFelony - af | some af2: AssaultiveFelony - af - af1 |
-		eventually (af1 in now and (eventually (af2 in now and eventually af in now)))
+		eventually (af1 in now and (eventually af in now)) and eventually (af2 in now and (eventually af in now))
 }
 
 -- Does the felony f occur after three preceding felonies?
-pred afterThirdFelony[f: Felony] {
-	some f1: Felony - f | some f2: Felony - f - f1 | some f3: Felony - f - f1 - f2 |
-		eventually (f1 in now and (eventually (f2 in now and (eventually f3 in now and eventually f in now)))) 
+pred afterThirdFelony[c: Conviction] {
+	some f1: Felony - c | some f2: Felony - c - f1 | some f3: Felony - c - f1 - f2 |
+		eventually (f1 in now and (eventually c in now)) and eventually (f2 in now and (eventually c in now)) and eventually (f3 in now and (eventually c in now))
 }
 
 -- Does the OWI occur after a preceding OWI?
@@ -102,11 +102,6 @@ pred afterFirstOWI[owi: OWI] {
 -- Is the conviction c (eventually) expunged?
 pred expunged[c: Conviction] {
 	some e: Expungement | c in e.con
-}
-
--- Is an expungement expunging a previously expunged conviction?
-pred multExpunge[e: Expungement] {
-	--all e1: Expungement - e | all c: Conviction | c in e.con and c in e1.con
 }
 
 fact {
@@ -132,7 +127,7 @@ fact {
 
 -- Michiganders with 4 or more felonies are ineligible to set aside *any* convictions (Sec. 1, 1a).
 pred sec1_1a {	
-	no f: Felony | no c: Conviction | afterThirdFelony[f] and expunged[c]
+	no c: Conviction | afterThirdFelony[c] and expunged[c]
 }
 
 -- Only two assaultive felonies may be expunged (Sec. 1, 1b).
@@ -185,8 +180,8 @@ fact {
 -- add predicates to check scenarios. Assert that what we expect should happen will happen
 -- Analyzer searches for all instances which satisfy the show predicate.
 pred show {
-	some f: Felony | expunged[f]
-	--some owi : OWI | expunged[owi]
+	--some f: Felony | expunged[f]
+	some owi : OWI | some owi1: OWI - owi | expunged[owi] and !expunged[owi1]
 }
 
 run show for 8
