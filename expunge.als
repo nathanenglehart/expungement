@@ -1,3 +1,4 @@
+
 -- nathan, ishaq version
 
 module expunge
@@ -81,6 +82,13 @@ pred afterFirstTenner[ty: TenYearFelony] {
 		eventually (ty1 in now and (eventually ty in now))
 }
 
+
+
+
+
+
+/* STREAMLINE THE BELOW */ 
+
 -- Does the assaultive felony af occur after two preceding assaultive felonies?
 pred afterSecondAssault[af: AssaultiveFelony] {
 	some af1: AssaultiveFelony - af | some af2: AssaultiveFelony - af - af1 |
@@ -98,6 +106,11 @@ pred afterFirstOWI[owi: OWI] {
 	some owi1: OWI - owi |
 		eventually (owi1 in now and (eventually owi in now))
 }
+
+
+
+
+
 
 -- Is the conviction c (eventually) expunged?
 pred expunged[c: Conviction] {
@@ -171,17 +184,17 @@ fact {
 	no e: Event | timeContradiction[e]
 }
 
--- Timing for Expungements: 1 < Felony (7 yrs), 1 Felony + Misdemeanors (5 yrs), Misdemeanors (3 yrs) (Sec. 1d)
+-- Timing for Expungements: (Sec. 1d)
 fact {
-	no e: Expungement | e.con.date -> e.date in withinThree -- Misdemeanor
-	--no e: Expungement | e.con in Misdemeanor and e.con.date -> e.date in withinThree -- withinFive
+	no e: Expungement | e.con.date -> e.date in withinThree -- Misdemeanors (3 yrs)
+	no e: Expungement | one f: Felony | f in e.con and e.con.date -> e.date in withinFive -- Single felony and misdemeanors (5 yrs)
+	no e: Expungement | some f: Felony | some f1: Felony -f | f in e.con and f1 in e.con and e.con.date -> e.date in withinSeven -- Multiple felonies and misdemeanors (7 yrs)
 }
 
 -- add predicates to check scenarios. Assert that what we expect should happen will happen
 -- Analyzer searches for all instances which satisfy the show predicate.
 pred show {
-	--some f: Felony | expunged[f]
-	some owi : OWI | some owi1: OWI - owi | expunged[owi] and !expunged[owi1]
+	some f: Felony | some f1: Felony - f | expunged[f] and expunged[f1]
 }
 
 run show for 8
