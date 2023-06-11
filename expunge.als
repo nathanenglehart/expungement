@@ -1,4 +1,3 @@
-
 -- nathan, ishaq version
 
 module expunge
@@ -19,7 +18,7 @@ sig Expungement extends Event {
 	con: some Conviction -- the convictions that are being expunged
 }
 
--- Linearly ordered time
+-- LINEARLY ORDERED TIME
 
 sig year {
 	happensBefore: set year,
@@ -76,18 +75,49 @@ fact {
 -- now indicates the current event
 var sig now in Event { } 
 
+fact {
+	-- Once events stop, they stop forever
+	always (no now implies always no now)
+	-- Every event occurs exactly once
+	all e: Event | eventually (e in now and after always e not in now)
+	-- Every expungement is expunging a preceding conviction
+	all x: Expungement | eventually (x.con in now and eventually x in now)
+	-- Every expungement is expunging a crime that hasn't been expunged yet
+	all x: Expungement | all x1: Expungement - x | x.con != x1.con
+	-- Crimes are not expunged twice
+	all x: Expungement | all x1: Expungement - x | all c: Conviction | c in x.con  => c not in x1.con
+	-- Convictions and expungements cannot happen at same time
+	-- However, convictions can happen at same time and then later
+	-- be expunged at the same time. This is the "One Bad Night Rule"
+	all x: Expungement | all c: Conviction | always (c in now => x not in now)
+	all x: Expungement | all c: Conviction | always (x in now => c not in now)
+}
+
+-- now must go through years in chronological order i.e. now is in Y(N-1) before Y(N) for 1 =< N =< 10
+pred timeContradiction[e: Event] {
+	some e1: Event | e1 in now and eventually e in now and e1.date in e.date.happensBefore
+}
+
+-- Well-behaved years
+fact {
+	-- All elements in now must have the same year
+	all e: Event | all e1: Event - e | always (e.date != e1.date => e not in now or e1 not in now) 
+
+	-- double check. This may be too restrictive
+	-- All elements not in now must have a different year than those in now
+	all e: Event | all e1: Event - e | always (e in now and e1 not in now => e.date != e1.date)
+
+	-- No situations where Y(N) occurs before Y(N-1), i.e. Y2 cannot occur before Y1 
+	no e: Event | timeContradiction[e]
+}
+
+-- STATUTE
+
 -- Does the ten-year felony ty occur after a preceding ten-year felony?
 pred afterFirstTenner[ty: TenYearFelony] {
 	some ty1: TenYearFelony - ty | 
 		eventually (ty1 in now and (eventually ty in now))
 }
-
-
-
-
-
-
-/* STREAMLINE THE BELOW */ 
 
 -- Does the assaultive felony af occur after two preceding assaultive felonies?
 pred afterSecondAssault[af: AssaultiveFelony] {
@@ -107,35 +137,9 @@ pred afterFirstOWI[owi: OWI] {
 		eventually (owi1 in now and (eventually owi in now))
 }
 
-
-
-
-
-
 -- Is the conviction c (eventually) expunged?
 pred expunged[c: Conviction] {
 	some e: Expungement | c in e.con
-}
-
-fact {
-	-- Once events stop, they stop forever
-	always (no now implies always no now)
-	-- Every event occurs exactly once
-	all e: Event | eventually (e in now and after always e not in now)
-	-- Every expungement is expunging a preceding conviction
-	all x: Expungement | eventually (x.con in now and eventually x in now)
-	-- Every expungement is expunging a crime that hasn't been expunged yet
-	all x: Expungement | all x1: Expungement - x | x.con != x1.con
-	-- Crimes are not expunged twice
-	all x: Expungement | all x1: Expungement - x | all c: Conviction | c in x.con  => c not in x1.con
-}
-
-fact {
-	-- Convictions and expungements cannot happen at same time
-	-- However, convictions can happen at same time and then later
-	-- be expunged at the same time. This is the "One Bad Night Rule"
-	all x: Expungement | all c: Conviction | always (c in now => x not in now)
-	all x: Expungement | all c: Conviction | always (x in now => c not in now)
 }
 
 -- Michiganders with 4 or more felonies are ineligible to set aside *any* convictions (Sec. 1, 1a).
@@ -158,37 +162,20 @@ pred sec1d_2 {
 	no owi: OWI | afterFirstOWI[owi] and expunged[owi]
 }
 
+-- Timing for Expungements: (Sec. 1d)
+pred sec1d {
+	no e: Expungement | e.con.date -> e.date in withinThree -- Misdemeanors (3 yrs)
+	no e: Expungement | one f: Felony | f in e.con and e.con.date -> e.date in withinFive -- Single felony and misdemeanors (5 yrs)
+	no e: Expungement | some f: Felony | some f1: Felony -f | f in e.con and f1 in e.con and e.con.date -> e.date in withinSeven -- Multiple felonies and misdemeanors (7 yrs)
+}
+
 -- The constraints of MCL 780.621 hold in the model.
 fact {
 	sec1d_2
 	sec1_1c 
 	sec1_1b 
 	sec1_1a
-}
-
--- now must go through years in chronological order i.e. now is in Y(N-1) before Y(N) for 1 =< N =< 10
-pred timeContradiction[e: Event] {
-	some e1: Event | e1 in now and eventually e in now and e1.date in e.date.happensBefore
-}
-
--- Well-behaved years
-fact {
-	-- All elements in now must have the same year
-	all e: Event | all e1: Event - e | always (e.date != e1.date => e not in now or e1 not in now) 
-
-	-- double check. This may be too restrictive
-	-- All elements not in now must have a different year than those in now
-	all e: Event | all e1: Event - e | always (e in now and e1 not in now => e.date != e1.date)
-
-	-- No situations where Y(N) occurs before Y(N-1), i.e. Y2 cannot occur before Y1 
-	no e: Event | timeContradiction[e]
-}
-
--- Timing for Expungements: (Sec. 1d)
-fact {
-	no e: Expungement | e.con.date -> e.date in withinThree -- Misdemeanors (3 yrs)
-	no e: Expungement | one f: Felony | f in e.con and e.con.date -> e.date in withinFive -- Single felony and misdemeanors (5 yrs)
-	no e: Expungement | some f: Felony | some f1: Felony -f | f in e.con and f1 in e.con and e.con.date -> e.date in withinSeven -- Multiple felonies and misdemeanors (7 yrs)
+	sec1d
 }
 
 -- add predicates to check scenarios. Assert that what we expect should happen will happen
