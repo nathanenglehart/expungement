@@ -1,4 +1,3 @@
 ### Expungement as Code
 
-The code in this repository is part of the Expungement as Code project at Michigan Technological University.
-
+Some preliminary code for Expungement as Code project to be run in [Alloy](https://groups.csail.mit.edu/sdg/pubs/2019/alloy-cacm-18-feb-22-2019.pdf). 
